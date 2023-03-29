@@ -1,3 +1,45 @@
+#' Title
+#'
+#' @param y
+#' @param evol_error
+#' @param D
+#' @param useObsSV
+#' @param nsave
+#' @param nburn
+#' @param nskip
+#' @param mcmc_params
+#' @param r_init
+#' @param r_sample
+#' @param step
+#' @param mu_init
+#' @param mu_sample
+#' @param prior_r
+#' @param evol0_sample
+#' @param evol0_sd
+#' @param sigma_e
+#' @param chol0
+#' @param computeDIC
+#' @param offset
+#' @param verbose
+#' @param seed
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#' beta <- bumps_sim()
+#' y <- rnbinom(n = length(beta), size = 5, mu = beta)
+#'
+#' # Need to typically run sampler for longer than specified below
+#' fit <- btf_nb(
+#'   y = y,
+#'   D = 2,
+#'   nburn = 5000,
+#'   evol0_sample = FALSE,
+#'   verbose = FALSE,
+#'   sigma_e = 1,
+#'   chol0 = TRUE
+#' )
 btf_nb = function(y, evol_error = 'DHS', D = 2, useObsSV = FALSE,
                   nsave = 1000, nburn = 1000, nskip = 4,
                   mcmc_params = list("mu", "yhat","evol_sigma_t2", "r", "dhs_phi", "dhs_mean"),
@@ -30,12 +72,6 @@ btf_nb = function(y, evol_error = 'DHS', D = 2, useObsSV = FALSE,
   # Initialize bandsparse locations
   loc = dspCP::t_create_loc(length(y)-D, 1)
   # loc_obs = t_create_loc(length(y), D)
-
-  # ## Preprocess
-  # ## Copied from BayesLogit - NBPG-logmean.R
-  ymax = max(y);
-  F_vec = cumsum(hist(y, breaks=0:(ymax+1)-0.5, plot=FALSE)$counts)
-  G = Nt - F_vec;
 
   # Begin by checking for missing values, then imputing (for initialization)
   is.missing = which(is.na(y)); any.missing = (length(is.missing) > 0)
@@ -246,7 +282,7 @@ sampleBTF_nb <- function(y, r, offset, eta_t, obs_sigma_t2, evol_sigma_t2,
       # Sample the states:
       mu = matrix(spam::rmvnorm.canonical(n = 1,
                                     b = linht,
-                                    Q = spam::as.spam.dgCMatrix(as(QHt_Matrix, "dgCMatrix")),
+                                    Q = spam::as.spam.dgCMatrix(as(QHt_Matrix, "generalMatrix")),
                                     Rstruct = chol0))
     } else {
       # Original sampler, based on Matrix package:
@@ -269,7 +305,6 @@ sampleBTF_nb <- function(y, r, offset, eta_t, obs_sigma_t2, evol_sigma_t2,
 ## Copied from old BayesLogit - NB-Shape.R
 sample_r <- function(y, d.prev, mu, r_sample, step = 1, lambda_r = 10, prior_r = rlang::expr(1 + x^2/100))
 {
-  # previous arguments G, ymax,
 
   # browser()
 
