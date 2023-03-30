@@ -378,6 +378,14 @@ sample_r <- function(y, d.prev, mu, r_sample, step = 1, lambda_r = 10, prior_r =
 
 }
 
+#' Title
+#'
+#' @param n
+#'
+#' @return
+#' @export
+#'
+#' @examples
 bumps_sim <- function(n=1024){
 
   x <- (0:(n-1.))/n
