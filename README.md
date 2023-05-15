@@ -6,7 +6,8 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of glmdsp is to …
+glmdsp provides a method for trend filtering count time series with a
+data adaptive Bayesian shrinkage model.
 
 ## Installation
 
