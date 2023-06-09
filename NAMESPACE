@@ -2,3 +2,4 @@
 
 export(btf_nb)
 export(bumps_sim)
+export(dop_sim)

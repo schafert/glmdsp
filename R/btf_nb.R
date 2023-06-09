@@ -399,3 +399,19 @@ bumps_sim <- function(n=1024){
   return(z)
 
 }
+
+#' Title
+#'
+#' @param n
+#'
+#' @return
+#' @export
+#'
+#' @examples
+dop_sim <- function(n = 1024){
+  x <- (0:(n-1))/n
+
+  ifelse(x <= 1/6,
+         -sqrt(x*(1-x)),
+         sqrt(x*(1-x))*sin((2*pi*1.05)/(x+.05)))
+}
