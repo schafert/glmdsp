@@ -50,47 +50,13 @@ We will use the simulated responses `y` for each of the methods.
 The Negative Binomial dynamic horseshoe model places a dependent prior on the increments and assumes a Negative Binomial data generating model. The shrinkage is applied to the differenced trend where the degree of differencing is a user choice. We can fit the model to the first and second differences.
 
 ```{r nb_dhs}
-fit_nb_dhs1 <- btf_nb(y = y, 
-                      D = 1, 
-                      nburn = 5000,
-                      evol0_sample = FALSE,
-                      verbose = FALSE,
-                      sigma_e = 1,
-                      chol0 = TRUE
-)
-
-fit_nb_dhs2 <- btf_nb(y = y, 
+fit_nb_dhs <- btf_nb(y = y, 
                       D = 2, 
                       nburn = 5000,
                       evol0_sample = FALSE,
                       verbose = FALSE,
                       sigma_e = 1,
                       chol0 = TRUE
-)
-```
-
-Additionally, we can compare to the independent horseshoe fit meaning there is no dependence among the latent local variance terms.
-
-
-```{r nb_hs}
-fit_nb_hs1 <- btf_nb(y = y, 
-                     D = 1, 
-                     evol_error = "HS",
-                     nburn = 5000,
-                     evol0_sample = FALSE,
-                     verbose = FALSE,
-                     sigma_e = 1,
-                     chol0 = TRUE
-)
-
-fit_nb_hs2 <- btf_nb(y = y, 
-                     D = 2, 
-                     evol_error = "HS",
-                     nburn = 5000,
-                     evol0_sample = FALSE,
-                     verbose = FALSE,
-                     sigma_e = 1,
-                     chol0 = TRUE
 )
 ```
 
@@ -110,13 +76,7 @@ The dynamic shrinkage process for trend estimates using a Gaussian likelihood is
 #devtools::install_github("haoxuanwu/dspCP")
 library(dspCP)
 
-fit_gau_dhs1 <- btf(y = y,
-                    D = 1,
-                    nburn = 5000,
-                    verbose = FALSE
-)
-
-fit_gau_dhs2 <- btf(y = y,
+fit_gau_dhs <- btf(y = y,
                     D = 2,
                     nburn = 5000,
                     verbose = FALSE
@@ -126,13 +86,7 @@ fit_gau_dhs2 <- btf(y = y,
 It is also a common approach in count data analysis to model the log transformation as Gaussian data. The following is an illustration of the transformation with an offset of 1 to accommodate zero counts.
 
 ```{r log_dhs}
-fit_log_dhs1 <- btf(y = log(y + 1),
-                    D = 1,
-                    nburn = 5000,
-                    verbose = FALSE
-)
-
-fit_log_dhs2 <- btf(y = log(y + 1),
+fit_log_dhs <- btf(y = log(y + 1),
                     D = 2,
                     nburn = 5000,
                     verbose = FALSE
@@ -147,11 +101,7 @@ The one dimensional fused LASSO for trend filtering applies the LASSO penalty to
 # install_github("statsmaths/glmgen", subdir="R_pkg/glmgen")
 library(glmgen) 
 
-fit_glm1 <- trendfilter(y, 
-                   k = 1-1,
-                   family = "poisson")
-
-fit_glm2 <- trendfilter(y, 
+fit_glm <- trendfilter(y, 
                    k = 2-1,
                    family = "poisson")
 ```
