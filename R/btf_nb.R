@@ -148,7 +148,7 @@ btf_nb = function(y, evol_error = 'DHS', D = 2, useObsSV = FALSE,
   for(nsi in 1:nstot){
 
     # Impute missing values, if any:
-    if(any.missing) y[is.missing] = rnbinom(length(is.missing), size = r, mean = mu[is.missing])
+    if(any.missing) y[is.missing] = rnbinom(length(is.missing), size = r, mu = mu[is.missing])
 
     # Sample the overdispersion:
     if(!is.null(r_sample)){
