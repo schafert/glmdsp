@@ -101,7 +101,7 @@ btf_nb = function(y, evol_error = 'DHS', D = 2, useObsSV = FALSE,
 
   # Initial SD (implicitly assumes a constant mean)
 
-  if(r_sample == "int_mh"){
+  if(is.NULL(r_sample) || r_sample == "int_mh"){
     eta_t <- pgdraw::pgdraw(y + r, mu + offset - log(r))
   }else{
     eta_t <- BayesLogit::rpg(Nt, y + r, mu + offset - log(r))
@@ -156,7 +156,7 @@ btf_nb = function(y, evol_error = 'DHS', D = 2, useObsSV = FALSE,
     }
 
     # Sample auxiliary variables
-    if(r_sample == "int_mh"){
+    if(is.NULL(r_sample) || r_sample == "int_mh"){
       eta_t <- pgdraw::pgdraw(y + r, mu + offset - log(r))
     }else{
       eta_t <- BayesLogit::rpg(Nt, y + r, mu + offset - log(r))
