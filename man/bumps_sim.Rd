@@ -2,13 +2,30 @@
 % Please edit documentation in R/btf_nb.R
 \name{bumps_sim}
 \alias{bumps_sim}
-\title{Title}
+\alias{dop_sim}
+\title{Generate Trend Functions}
 \usage{
 bumps_sim(n = 1024)
+
+dop_sim(n = 1024)
 }
 \arguments{
-\item{n}{}
+\item{n}{integer with default to 1024 of the length of time series; increasing n infills}
+}
+\value{
+vector of length \code{n}
 }
 \description{
-Title
+Two helper functions for calculating trend functions used to test various trend
+filtering methods. The functions are modified variations of the wavelet test functions bumps and doppler.
+}
+\examples{
+
+beta_bumps <- bumps_sim()
+y <- rnbinom(n = length(beta_bumps), size = 5, mu = beta_bumps)
+
+
+beta_dop <- bumps_sim()
+y <- rnbinom(n = length(beta_dop), size = 5, mu = exp(beta_dop))
+
 }

@@ -1,5 +1,5 @@
 ---
-title: "code-supplement"
+title: "Code Supplement"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{code-supplement}
@@ -21,26 +21,29 @@ library(glmdsp)
 The following vignette provides an illustration of fitting the suite of models in the manuscript describing the proposed trend filtering model. The models are:
 
 * Negative Binomial dynamic horseshoe (NB-DHS) available in *glmdsp*
-* Negative Binomial independent horseshoe (NB-HS) available in *glmdsp*
 * Exponential smoothing (Exp-Smooth) available in *forecast*
 * Gaussian dynamic horseshoe available in *dspCP*
 * Poisson fused lasso penalized regression (GLM-L1) available in *glmgen*
 
 ## Simulated time series
 
-To simulate from the modified bumps functions, we can use `bumps_sim()` to construct the trend and `rnbinom()` to simulate the responses.
+To simulate from the modified bumps functions, we can use `dop_sim()` to construct the trend and `rnbinom()` to simulate the responses.
 
 ```{r}
 set.seed(20230515)
 library(ggplot2)
 theme_set(theme_bw())
 
-theta <- bumps_sim(n = 200)
-y <- rnbinom(n = 200, size = 5, mu = theta)
+Nt <- 200
+
+theta <- dop_sim(n = Nt) |> 
+  (\(x) exp(5*x))()
+y <- rnbinom(n = Nt, size = 5, mu = theta)
 
 ggplot()+
-  geom_point(aes(x = 1:200, y = y))+
-  geom_line(aes(x = 1:200, y = theta))
+  geom_point(aes(x = 1:Nt, y = y))+
+  geom_line(aes(x = 1:Nt, y = theta))+
+  scale_x_continuous(name = "")
 ```
 
 We will use the simulated responses `y` for each of the methods.
@@ -60,6 +63,18 @@ fit_nb_dhs <- btf_nb(y = y,
 )
 ```
 
+```{r}
+alpha <- 0.05
+
+fit_nb_dhs$rmse <- sqrt(mean((theta -  apply(
+  exp(fit_nb_dhs$mu), 2, median
+))  ^  2))
+fit_nb_dhs$mciw <-
+  mean(apply(exp(fit_nb_dhs$mu), 2, quantile, 1  -  alpha  /  2) - apply(exp(fit_nb_dhs$mu), 2, quantile, alpha  / 2))
+
+```
+
+
 ## Exponential smoothing
 
 Exponential smoothing is a weighted average estimate where the current trend is an average of all of the past with exponential decay of the weights. Therefore, the more recent past has more influence on the current trend estimate.
@@ -67,6 +82,11 @@ Exponential smoothing is a weighted average estimate where the current trend is 
 ```{r exp_smooth}
 fit_exp_smooth <- forecast::ses(y) 
 ```
+
+```{r}
+fit_exp_smooth$rmse <- sqrt(mean((theta - fit_exp_smooth$fitted) ^ 2))
+```
+
 
 ## Gaussian dynamic horseshoe
 
@@ -83,6 +103,14 @@ fit_gau_dhs <- btf(y = y,
 )
 ```
 
+```{r}
+fit_gau_dhs$rmse <-
+    sqrt(mean((theta -  apply(fit_gau_dhs$mu, 2, median)) ^ 2))
+fit_gau_dhs$mciw <-
+    mean(apply(fit_gau_dhs$mu, 2, quantile, 1 - alpha / 2) -
+           apply(fit_gau_dhs$mu, 2, quantile, alpha / 2))
+```
+
 It is also a common approach in count data analysis to model the log transformation as Gaussian data. The following is an illustration of the transformation with an offset of 1 to accommodate zero counts.
 
 ```{r log_dhs}
@@ -93,11 +121,31 @@ fit_log_dhs <- btf(y = log(y + 1),
 )
 ``` 
 
+The transformation requires XYZ to transform the estimates
+
+```{r}
+fit_log_dhs$rmse <-
+    sqrt(mean((theta -  apply(
+      exp(fit_log_dhs$mu + fit_log_dhs$obs_sigma_t2[, 1] / 2) - 1,
+      2,
+      median
+    )) ^ 2))
+fit_log_dhs$mciw <- mean(apply(exp(fit_log_dhs$mu + fit_log_dhs$obs_sigma_t2[, 1] / 2) - 1,
+                     2,
+                     quantile,
+                     1 - alpha / 2) -
+                 apply(exp(fit_log_dhs$mu + fit_log_dhs$obs_sigma_t2[, 1] / 2) - 1,
+                       2,
+                       quantile,
+                       alpha / 2))
+```
+
+
 ## Poisson fused LASSO
 
 The one dimensional fused LASSO for trend filtering applies the LASSO penalty to the incremental differences and is most akin to the independent horseshoe penalty. It is available for the Poisson regression in the *glmgen* package. The degree of differencing in the fused LASSO is denoted by k where $k = D-1$.
 
-```{r glm_l1}
+```{r glm}
 # install_github("statsmaths/glmgen", subdir="R_pkg/glmgen")
 library(glmgen) 
 
@@ -183,4 +231,94 @@ cv_glmgen <- function (object, k = 5, mode = c("lambda", "df"),
 }
 ```
 
+```{r}
+cv_fit <- cv_glmgen(fit_glm, verbose = FALSE)
+  
+fit_glm$rmse <-
+    sqrt(mean((exp(fit_glm$beta[, cv_fit$i.min]) - theta) ^ 2))
+```
+
+## Compare results
+
+### Fitted Values
+
+Below is code to extract the pointwise fitted values for the trend for each method and credible intervals for Bayesian methods.
+
+```{r}
+library(tidyverse)
+
+alpha <- 0.05
+Nmod <- 5
+
+plot_df <- tibble(
+  x = rep(1:Nt, times = Nmod),
+  y = rep(y, times = Nmod),
+  theta = rep(theta, times = Nmod),
+  fit = c(apply(exp(fit_nb_dhs$mu), 2, median),
+          fit_exp_smooth$fitted,
+          apply(fit_gau_dhs$mu, 2, median),
+          apply(exp(fit_log_dhs$mu + fit_log_dhs$obs_sigma_t2[, 1] / 2) - 1, 
+                2, median),
+          exp(fit_glm$beta[,cv_fit$i.min])),
+  lwr = c(apply(exp(fit_nb_dhs$mu), 2, quantile, prob = alpha/2),
+          rep(NA, Nt),
+          apply(fit_gau_dhs$mu, 2, quantile, prob = alpha/2),
+          apply(exp(fit_log_dhs$mu + fit_log_dhs$obs_sigma_t2[, 1] / 2) - 1, 
+                2, quantile, prob = alpha/2),
+          rep(NA, Nt)),
+  upr = c(apply(exp(fit_nb_dhs$mu), 2, quantile, prob = 1-alpha/2),
+          rep(NA, Nt),
+          apply(fit_gau_dhs$mu, 2, quantile, prob = 1-alpha/2),
+          apply(exp(fit_log_dhs$mu + fit_log_dhs$obs_sigma_t2[, 1] / 2) - 1, 
+                2, quantile, prob = 1-alpha/2),
+          rep(NA, Nt)),
+  model = rep(c("Bayesian NB Trend Filtering",
+                "Exponential Smoothing",
+                "Bayesian Gau Trend Filtering",
+                "Bayesian Log Trend Filtering",
+                "Poisson Fused Lasso"), each = Nt)
+)
+```
+
+
+### Credible Intervals
+
+### Plot 
+
+```{r}
+plot_df |> 
+  ggplot(aes(x = x)) +
+  geom_line(aes(y = theta), 
+            linewidth = 1, 
+            linetype = 2) +
+  geom_line(
+    aes(y = fit),
+    linewidth = 1,
+    alpha = 0.8,
+    col = "#21908CFF"
+  ) +
+  scale_y_continuous(name = "Simulated Count",
+               labels = scales::label_number(accuracy = 1)) +
+  scale_x_continuous(name = "") +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.4)+
+  facet_wrap(vars(model))+
+  theme(text = element_text(face = "bold", size = 18),
+        strip.background = element_blank())
+```
+
+### Tabular
+
+```{r, echo=FALSE}
+results_df <- tibble::tribble(
+  ~Model, ~RMSE, ~MCIW,
+  "Bayesian NB Trend Filtering", fit_nb_dhs$rmse, fit_nb_dhs$mciw,
+  "Bayesian Gau Trend Filtering", fit_gau_dhs$rmse, fit_gau_dhs$mciw,
+  "Bayesian Log Trend Filtering", fit_log_dhs$rmse, fit_log_dhs$mciw,
+  "Poisson Fused Lasso", fit_glm$rmse, NA,
+  "Exponential Smoothing", fit_exp_smooth$rmse, NA
+)
+
+results_df |> 
+  knitr::kable()
+```
 

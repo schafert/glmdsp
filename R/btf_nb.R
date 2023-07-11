@@ -1,29 +1,63 @@
-#' Title
+#' MCMC Sampler for Bayesian Trend Filtering with Negative Binomial Observation Model
 #'
-#' @param y
-#' @param evol_error
-#' @param D
-#' @param useObsSV
-#' @param nsave
-#' @param nburn
-#' @param nskip
-#' @param mcmc_params
-#' @param r_init
-#' @param r_sample
-#' @param step
-#' @param mu_init
-#' @param mu_sample
-#' @param prior_r
-#' @param evol0_sample
-#' @param evol0_sd
-#' @param sigma_e
-#' @param chol0
-#' @param computeDIC
-#' @param offset
-#' @param verbose
-#' @param seed
+#' @description
+#' Run the MCMC for Bayesian trend filtering with a penalty on first (D = 1) or
+#' second (D = 2) differences of the log conditional expectation
+#' of a Negative Binomial distribution. The penalty is determined by the prior
+#' on the evolution errors, currently only the following options are available:
+#' \itemize{
+#' \item the dynamic horseshoe prior ('DHS');
+#' \item the static horseshoe prior ('HS');
+#' }
+#' In each case, the evolution error is a scale mixture of Gaussians.
+#' Sampling is accomplished with a (parameter-expanded) Gibbs sampler,
+#' mostly relying on a dynamic linear model representation.
+#'
+#' @inheritParams dspCP::btf
+#' @param y the length \code{T} vector of time series observations; expected to be in the support of a Negative Binomial distribution
+#' @param mcmc_params character list of parameters for which we store the MCMC output;
+#' must be one or more of:
+#' \itemize{
+#' \item 'mu' (conditional mean)
+#' \item 'yhat' (posterior predictive distribution)
+#' \item 'evol_sigma_t2' (evolution error variance)
+#' \item 'r' (overdispersion)
+#' \item 'dhs_phi' (DHS AR(1) coefficient)
+#' \item 'dhs_mean' (DHS AR(1) unconditional mean)
+#' }
+#' Defaults to everything.
+#' @param r_init numeric; initial value (defaults to 5) of MCMC sampling for overdispersion parameter
+#' @param r_sample character string specifying sampling strategy for overdispersion;
+#' must be one of 'int_mh' (integer random walk Metropolis-Hastings; default),
+#' 'slice' (slice sampling), 'mh' (uniform random walk Metropolis-Hastings), or
+#' `NULL` (not sampled, fixed at `r_init`)
+#' @param step numeric; step length of proposal distribution for 'int_mh' and 'mh'
+#' values of `r_sample` (defaults to 1)
+#' @param mu_init length \code{T} vector of initial values for the log conditional expectation or
+#' `NULL` (default) for data driven starting value (`log(y + 1) + noise`)
+#' @param mu_sample logical; If `TRUE` (default), the log conditional mean is sampled,
+#' else it is fixed at `mu_init`
+#' @param prior_r expression of `x` for the proportional log prior density of the overdispersion;
+#' defaults to half-Cauchy prior, `log(1 + x^2/100)`.
+#' @param evol0_sample logical; If `TRUE` (default), the prior variance of the initial `D` values of mu is sampled,
+#' else it is fixed at `evol0_sd`
+#' @param evol0_sd numeric; initial value (defaults to 10) or the prior standard deviation
+#' for the initial `D` values of mu
+#' @param sigma_e numeric; scale value (defaults to `1/sqrt(T)`) for half-Cauchy prior on global variance parameter
+#' @param chol0 logical; If anything except `NULL` (the default), the Cholesky term of the log volatility is precomputed
+#' @param offset length \code{T} vector of offset values for the log conditional expectation
+#' @param verbose logical; If TRUE (the default), time remaining is printed to console
+#' @param seed optional seed for random number generation for reproducible results
 #'
 #' @return
+#' A named list with the following. One named element for each of the parameters specified in `mcmc_params` containing
+#' the `nsave` posterior draws as a vector for scalar parameters and matrix for multivariate parameters.
+#' An element named `loglike` containing a vector of the `nsave` evaluations of the log
+#' likelihood of the data `y` with a Negative Binomial distribution defined by the current iteration conditional expectation + offset and overdispersion.
+#' If `computeDIC` is `TRUE`, a named element for the computed value of DIC and effective parameters p_d for the data `y`
+#' with a Negative Binomial distribution defined by the posterior mean of the conditional expectation + offset and posterior
+#' mean overdispersion.
+#'
 #' @export
 #'
 #' @examples
@@ -40,7 +74,7 @@
 #'   sigma_e = 1,
 #'   chol0 = TRUE
 #' )
-btf_nb = function(y, evol_error = 'DHS', D = 2, useObsSV = FALSE,
+btf_nb = function(y, evol_error = 'DHS', D = 2,
                   nsave = 1000, nburn = 1000, nskip = 4,
                   mcmc_params = list("mu", "yhat","evol_sigma_t2", "r", "dhs_phi", "dhs_mean"),
                   r_init = NULL, r_sample = "int_mh", step = 1,
@@ -59,7 +93,7 @@ btf_nb = function(y, evol_error = 'DHS', D = 2, useObsSV = FALSE,
 
   # For D = 0, return special case:
   # if(D == 0){
-  #   return(btf0(y = y, evol_error = evol_error, useObsSV = useObsSV,
+  #   return(btf0(y = y, evol_error = evol_error,
   #               nsave = nsave, nburn = nburn, nskip = nskip,
   #               mcmc_params = mcmc_params,
   #               computeDIC = computeDIC,
@@ -302,7 +336,6 @@ sampleBTF_nb <- function(y, r, offset, eta_t, obs_sigma_t2, evol_sigma_t2,
 }
 
 
-## Copied from old BayesLogit - NB-Shape.R
 sample_r <- function(y, d.prev, mu, r_sample, step = 1, lambda_r = 10, prior_r = rlang::expr(1 + x^2/100))
 {
 
@@ -378,14 +411,22 @@ sample_r <- function(y, d.prev, mu, r_sample, step = 1, lambda_r = 10, prior_r =
 
 }
 
-#' Title
+#' Generate Trend Functions
 #'
-#' @param n
+#' Two helper functions for calculating trend functions used to test various trend
+#' filtering methods. The functions are modified variations of the wavelet test functions bumps and doppler.
 #'
-#' @return
+#' @param n integer with default to 1024 of the length of time series; increasing n infills
+#'
+#' @return vector of length `n`
 #' @export
 #'
 #' @examples
+#'
+#' beta_bumps <- bumps_sim()
+#' y <- rnbinom(n = length(beta_bumps), size = 5, mu = beta_bumps)
+#'
+#'
 bumps_sim <- function(n=1024){
 
   x <- (0:(n-1.))/n
@@ -400,14 +441,14 @@ bumps_sim <- function(n=1024){
 
 }
 
-#' Title
-#'
-#' @param n
-#'
-#' @return
+
 #' @export
 #'
 #' @examples
+#' beta_dop <- bumps_sim()
+#' y <- rnbinom(n = length(beta_dop), size = 5, mu = exp(beta_dop))
+#'
+#' @rdname bumps_sim
 dop_sim <- function(n = 1024){
   x <- (0:(n-1))/n
 
