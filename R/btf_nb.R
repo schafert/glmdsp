@@ -26,7 +26,8 @@
 #' \item 'dhs_mean' (DHS AR(1) unconditional mean)
 #' }
 #' Defaults to everything.
-#' @param r_init numeric; initial value (defaults to 5) of MCMC sampling for overdispersion parameter
+#' @param r_init numeric; initial value (defaults to 5) of MCMC sampling for overdispersion parameter;
+#' must be an integer if r_sample is 'int_mh' or `NULL`
 #' @param r_sample character string specifying sampling strategy for overdispersion;
 #' must be one of 'int_mh' (integer random walk Metropolis-Hastings; default),
 #' 'slice' (slice sampling), 'mh' (uniform random walk Metropolis-Hastings), or
