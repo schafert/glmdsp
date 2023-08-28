@@ -183,7 +183,7 @@ btf_nb = function(y, evol_error = 'DHS', D = 2,
   for(nsi in 1:nstot){
 
     # Impute missing values, if any:
-    if(any.missing) y[is.missing] = rnbinom(length(is.missing), size = r, mu = mu[is.missing])
+    if(any.missing) y[is.missing] = stats::rnbinom(length(is.missing), size = r, mu = mu[is.missing])
 
     # Sample the overdispersion:
     if(!is.null(r_sample)){
@@ -260,7 +260,7 @@ btf_nb = function(y, evol_error = 'DHS', D = 2,
 
   if(computeDIC){
     # Log-likelihood evaluated at posterior means:
-    loglike_hat = sum(dnbinom(y,
+    loglike_hat = sum(stats::dnbinom(y,
                               size = mean(post_r),
                               mu = exp(colMeans(post_mu + offset)),
                               log = TRUE))
