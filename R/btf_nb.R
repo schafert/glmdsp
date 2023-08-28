@@ -337,6 +337,20 @@ sampleBTF_nb <- function(y, r, offset, eta_t, obs_sigma_t2, evol_sigma_t2,
 }
 
 
+#' Title
+#'
+#' @param y
+#' @param d.prev
+#' @param mu
+#' @param r_sample
+#' @param step
+#' @param lambda_r
+#' @param prior_r
+#'
+#' @return
+#' @export
+#'
+#' @examples
 sample_r <- function(y, d.prev, mu, r_sample, step = 1, lambda_r = 10, prior_r = rlang::expr(1 + x^2/100))
 {
 

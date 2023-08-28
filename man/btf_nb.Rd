@@ -55,7 +55,8 @@ must be one or more of:
 }
 Defaults to everything.}
 
-\item{r_init}{numeric; initial value (defaults to 5) of MCMC sampling for overdispersion parameter}
+\item{r_init}{numeric; initial value (defaults to 5) of MCMC sampling for overdispersion parameter;
+must be an integer if r_sample is 'int_mh' or \code{NULL}}
 
 \item{r_sample}{character string specifying sampling strategy for overdispersion;
 must be one of 'int_mh' (integer random walk Metropolis-Hastings; default),
