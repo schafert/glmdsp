@@ -16,6 +16,7 @@ knitr::opts_chunk$set(
 
 ```{r setup}
 library(glmdsp)
+library(MASS)
 ```
 
 The following vignette provides an illustration of fitting the suite of models in the manuscript describing the proposed trend filtering model. The models are:
