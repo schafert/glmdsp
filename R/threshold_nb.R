@@ -29,6 +29,8 @@
 #' @param seed
 #'
 #' @return
+#'
+#' @import spam
 #' @export
 #'
 #' @examples
@@ -300,7 +302,7 @@ t_sampleBTF_nb <- function(y, r, offset, eta_t, obs_sigma_t2,
       # Sample the states:
       mu = matrix(spam::rmvnorm.canonical(n = 1,
                                     b = linht,
-                                    Q = spam::as.spam.dgCMatrix(as(QHt_Matrix, "dgCMatrix")),
+                                    Q = as(QHt_Matrix, "generalMatrix"),
                                     Rstruct = chol0))
     } else {
       # Original sampler, based on Matrix package:
