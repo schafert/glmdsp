@@ -16,7 +16,7 @@ You can install the development version of glmdsp from
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("schafert/glmdsp")
+devtools::install_github("schafert/glmdsp", dependencies = TRUE, build_vignettes = TRUE)
 ```
 
 ## Example
